@@ -1,71 +1,86 @@
-// server.js - Starter Express server for Week 2 assignment
 
-// Import required modules
+
 const express = require('express');
-const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid');
-
-// Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+/*const PORT = 3000;*/
 
-// Middleware setup
-app.use(bodyParser.json());
-
-// Sample in-memory products database
-let products = [
-  {
-    id: '1',
-    name: 'Laptop',
-    description: 'High-performance laptop with 16GB RAM',
-    price: 1200,
-    category: 'electronics',
-    inStock: true
-  },
-  {
-    id: '2',
-    name: 'Smartphone',
-    description: 'Latest model with 128GB storage',
-    price: 800,
-    category: 'electronics',
-    inStock: true
-  },
-  {
-    id: '3',
-    name: 'Coffee Maker',
-    description: 'Programmable coffee maker with timer',
-    price: 50,
-    category: 'kitchen',
-    inStock: false
-  }
-];
-
-// Root route
+// Hello World route
 app.get('/', (req, res) => {
-  res.send('Welcome to the Product API! Go to /api/products to see all products.');
+  res.send('Hello World');
 });
 
-// TODO: Implement the following routes:
-// GET /api/products - Get all products
-// GET /api/products/:id - Get a specific product
-// POST /api/products - Create a new product
-// PUT /api/products/:id - Update a product
-// DELETE /api/products/:id - Delete a product
-
-// Example route implementation for GET /api/products
-app.get('/api/products', (req, res) => {
-  res.json(products);
-});
-
-// TODO: Implement custom middleware for:
-// - Request logging
-// - Authentication
-// - Error handling
 
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-// Export the app for testing purposes
-module.exports = app; 
+
+
+// server.js
+const express = require('express');
+
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const productRoutes = require('./routes/productRoutes');
+
+dotenv.config();
+app.use(express.json());
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.error(err));
+
+// API Routes
+app.use('/api/products', productRoutes);
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+const dotenv = require('dotenv');
+dotenv.config();
+
+app.use(express.json()); // Parses application/json
+
+
+const logger = require('./middleware/logger');
+const authMiddleware = require('./middleware/auth');
+
+app.use(logger); // Logs all requests
+app.use(authMiddleware); // Protects all routes (or apply selectively)
+
+
+const errorHandler = require('./middleware/errorHandler');
+
+// ...after all routes
+app.use(errorHandler);
+
+
+
+
+const express = require('express');
+const router = express.Router();
+const Product = require('../models/Product');
+const asyncHandler = require('../utils/asyncHandler');
+const NotFoundError = require('../errors/NotFoundError');
+
+// GET /api/products/:id
+router.get('/:id', asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) throw new NotFoundError('Product');
+  res.json(product);
+}));
+
+// DELETE /api/products/:id
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const removed = await Product.findByIdAndDelete(req.params.id);
+  if (!removed) throw new NotFoundError('Product');
+  res.json({ message: 'Product deleted' });
+}));
+
+// Add `asyncHandler(...)` to all other async route handlers similarly
+
+
